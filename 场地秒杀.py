@@ -1,20 +1,33 @@
 from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import re
 import numpy as np
-import easyocr
 import io
 from PIL import Image
 from PIL import ImageEnhance
+from base64 import b64encode
 import time
+import json
+import requests
+
+easyocr = None
+
+try:
+    import easyocr
+except:
+    pass
 
 class 场地秒杀():
-    def __init__(self, username, password, day, timespan, service, chromedrive):
+    def __init__(self, username, password, day, timespan, service, chromedrive, remote_username, remote_password):
         self.username = username
         self.password = password
         self.day = day
         self.timespan = timespan
         self.service = service
         self.chromedrive = chromedrive
+        self.remote_username = remote_username
+        self.remote_password = remote_password
         
         self.browser = webdriver.Chrome(self.chromedrive)
 
@@ -36,21 +49,36 @@ class 场地秒杀():
 
     # reference from: https://github.com/ZiYang-xie/Hello_Fudan/blob/main/main.py
     def read_captcha(self, img_byte):
-        img = Image.open(io.BytesIO(img_byte)).convert('L')
-        enh_bri = ImageEnhance.Brightness(img)
-        new_img = enh_bri.enhance(factor=1.5)
+        if easyocr == None:
+            base64 = b64encode(img_byte)
+            data = {
+                'image' : base64,
+                'username' : self.remote_username,
+                'password' : self.remote_password,
+                'typeid' : 3
+            }
+            result = json.loads(requests.post("http://api.ttshitu.com/base64", json=data).text)
+            if result['success']:
+                return result["data"]["result"]
+            else:
+                print(result["message"])
+                return ""
+        else:
+            img = Image.open(io.BytesIO(img_byte)).convert('L')
+            enh_bri = ImageEnhance.Brightness(img)
+            new_img = enh_bri.enhance(factor=1.5)
+            
+            image = np.array(new_img)
+            reader = easyocr.Reader(['en'])
+            horizontal_list, free_list = reader.detect(image, optimal_num_chars=4)
+            character = '0123456789'
+            allow_list = list(character)
         
-        image = np.array(new_img)
-        reader = easyocr.Reader(['en'])
-        horizontal_list, free_list = reader.detect(image, optimal_num_chars=4)
-        character = '0123456789'
-        allow_list = list(character)
-    
-        result = reader.recognize(image, 
-                                allowlist=allow_list,
-                                horizontal_list=horizontal_list[0],
-                                free_list=free_list[0],
-                                detail = 0)
+            result = reader.recognize(image, 
+                                    allowlist=allow_list,
+                                    horizontal_list=horizontal_list[0],
+                                    free_list=free_list[0],
+                                    detail = 0)
         return result
 
     def rob_one_field(self, order_button):
@@ -66,6 +94,11 @@ class 场地秒杀():
         captcha_input.send_keys(captcha)
         submit_button = self.browser.find_element_by_id("btn_sub")
         submit_button.click()
+        try:
+            alert = WebDriverWait(self.browser, 10).until(EC.alert_is_present())
+            alert.accept()
+        except:
+            pass
 
     def rob_one_day(self, day):
         self.browser.get(self.service)
@@ -89,7 +122,7 @@ class 场地秒杀():
                         current_url = self.browser.current_url
                         self.rob_one_field(order_button)
                         self.browser.get(current_url)
-            except Exception:
+            except:
                 pass
                 
     def 抢(self):
@@ -114,5 +147,9 @@ days = [] # 1-7代表周一至周日
 timespan = list(range(12,22)) # 12代表12:00-13:00的时间段
 service = standard_badminton_service # 实际url
 drive_path = "" # chromedrive的地址
-秒杀 = 场地秒杀(uid, password, days, timespan, service, drive_path)
+
+remote_username = ""
+remote_password =  ""
+
+秒杀 = 场地秒杀(uid, password, days, timespan, service, drive_path, remote_username, remote_password)
 秒杀.抢()
