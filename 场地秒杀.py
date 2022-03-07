@@ -72,8 +72,9 @@ class 场地秒杀():
         day = self.browser.find_element_by_id("one" + str(day))
         day.click()
         lines = self.browser.find_elements_by_class_name("site_tr")
-        for line in lines:
+        for i in range(len(lines)):
             try:
+                line = self.browser.find_elements_by_class_name("site_tr")[i]
                 timespan = line.find_element_by_class_name("site_td1").text
                 match = re.match("([0-9]+?):00\\n([0-9]+?):00", timespan, flags=0)
                 if not match:
@@ -103,6 +104,9 @@ class 场地秒杀():
 standard_badminton_service = "https://elife.fudan.edu.cn/public/front/toResourceFrame.htm?contentId=2c9c486e4f821a19014f82418a900004"
 # 非标场的url
 nonstandard_badminton_service = "https://elife.fudan.edu.cn/public/front/toResourceFrame.htm?contentId=2c9c486e4f821a19014f86df4f662ba9"
+
+# 国权路网球场
+test_service = "https://elife.fudan.edu.cn/public/front/toResourceFrame.htm?contentId=8aecc6ce7d2dffbd017de9ea4e7e4ece"
 
 uid = ""
 password = ""
