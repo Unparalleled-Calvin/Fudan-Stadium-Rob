@@ -52,7 +52,7 @@ class 场地秒杀():
         if easyocr == None:
             base64 = b64encode(img_byte)
             data = {
-                'image' : base64,
+                'image' : base64.decode(),
                 'username' : self.remote_username,
                 'password' : self.remote_password,
                 'typeid' : 3
